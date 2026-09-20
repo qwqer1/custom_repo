@@ -10,17 +10,18 @@
  *  - configs.js advertises *.mangafiles.com:88 hosts. That domain is NXDOMAIN
  *    globally and is dead config; do not use it.
  *  - Images are hotlink-protected and 403 without a Referer header.
+ *  - The search endpoint is behind a Cloudflare challenge; the app handles it.
  */
 class Mh160 extends ComicSource {
     name = "漫画160"
 
     key = "mh160"
 
-    version = "1.0.0"
+    version = "1.0.1"
 
     minAppVersion = "1.0.0"
 
-    // TODO: replace with the raw URL of this file once it is hosted.
+    // self-update URL; must match where this file is hosted
     url = "https://raw.githubusercontent.com/qwqer1/custom_repo/main/mh160.js"
 
     baseUrl = "https://www.mh160mh.com"
@@ -127,18 +128,17 @@ class Mh160 extends ComicSource {
 
     search = {
         load: async (keyword, options, page) => {
-            const url = `${this.baseUrl}/statics/searchelxt1e1.aspx?key=${encodeURIComponent(keyword)}`
-            const res = await Network.get(url, this.headers)
-            // This endpoint sits behind a Cloudflare JS challenge that a plain
-            // HTTP client cannot solve. Browsing endpoints are not challenged.
-            if (res.status === 403 || /Just a moment|cf-browser-verification|cf_chl/i.test(res.body ?? "")) {
-                throw "搜索被 Cloudflare 拦截，请改用分类浏览 / Search is blocked by Cloudflare; browse by category instead"
-            }
-            if (res.status !== 200) {
-                throw `Invalid status code: ${res.status}`
-            }
-            const comics = this.parseList(new HtmlDocument(res.body))
-            return { comics: comics, maxPage: this.maxPageFor(comics, page) }
+            // This endpoint answers 403 with `cf-mitigated: challenge`. Venera's
+            // CloudflareInterceptor detects that header, opens a webview for the
+            // user to pass the challenge, then reuses cf_clearance and the
+            // webview's UA on later requests. Do NOT catch the 403 here: doing so
+            // hides the challenge from the app and the webview never opens.
+            const doc = await this.fetchDoc(
+                `${this.baseUrl}/statics/searchelxt1e1.aspx?key=${encodeURIComponent(keyword)}`)
+            // The paging parameter for this endpoint could not be observed from
+            // behind the challenge, so report a single page rather than
+            // re-serving page 1 every time the user scrolls.
+            return { comics: this.parseList(doc), maxPage: 1 }
         },
         optionList: [],
     }

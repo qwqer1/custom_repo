@@ -9,7 +9,7 @@
         "name": "漫画160",
         "url": "https://raw.githubusercontent.com/qwqer1/custom_repo/main/mh160.js",
         "key": "mh160",
-        "version": "1.0.0",
-        "description": "mh160mh.com 漫画源。搜索被 Cloudflare 拦截，请用分类浏览。"
+        "version": "1.0.1",
+        "description": "mh160mh.com 漫画源。首次搜索需在弹出的网页中通过一次 Cloudflare 验证。"
     }
 ]
